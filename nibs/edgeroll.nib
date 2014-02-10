@@ -1,0 +1,382 @@
+
+<title>C.{{campaign}} | Pencil</title>
+<script type="text/javascript" src="static/js/d3.js"></script>
+<script type="text/javascript" src="static/js/crossfilter.js"></script>
+<script src="http://code.jquery.com/jquery-latest.js"></script>
+<script type="text/javascript" src="static/js/dc.js"></script>
+<script src='{{sturl}}/static/js/bootstrap.min.js' type='text/javascript'></script>
+
+<link href="static/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" type="text/css" href="static/css/dc.css"/>
+
+<link href='{{sturl}}/static/css/shCore.css' rel='stylesheet' type='text/css'/>
+<link href='{{sturl}}/static/css/shThemeDefault.css' rel='stylesheet' type='text/css'/>
+<script src='{{sturl}}/static/js/shCore.js' type='text/javascript'></script>
+<script src="{{sturl}}/static/js/shAutoloader.js" type="text/javascript"></script>
+<script src='{{sturl}}/static/js/shBrushJScript.js' type='text/javascript'></script>
+<script src='{{sturl}}/static/js/shBrushXml.js' type='text/javascript'></script>
+<script src='{{sturl}}/static/js/pencil.js' type='text/javascript'></script>
+<script type="text/javascript">
+var loaderHTML = '<center><img src="{{sturl}}/static/img/loader.gif"></img></center>'; 
+document.write('<div class="modal hide fade" id="myModal"> <div class="modal-body">' + loaderHTML + '<h4><center>we are fetchin some data for you<br>now isnt that special?</center></h4>'+'</div> </div>');
+//$('#myModal').modal('show');
+</script>
+
+
+<div class="container">
+<br>
+<h2>campaign: {{cname}} ({{campaign}})</h2>
+<br>
+<div class="row">
+    <div id="network-bubble-chart" class="dc-chart">
+        <strong>Network Performance</strong>
+        <a class="reset" href="javascript:networkBubbleChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+
+        <div class="clearfix"></div>
+    </div>
+</div>
+
+<div class="row">
+<div>
+  <div class="row">
+    <div id="supply-chart" class="chart" >
+        <strong>Total Supply Imps</strong>
+        <a class="reset" href="javascript:supplyChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+
+        <div class="clear"></div>
+    </div>
+    <div id="delivery-chart" class="chart" >
+        <strong>Delivered Imps</strong>
+        <a class="reset" href="javascript:deliveryChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+
+        <div class="clear"></div>
+    </div>
+  <div id="edges-hist" class="chart">
+      <span><strong>Edges per Supply Node [log10]</strong></span>
+      <a class="reset" href="javascript:edgesHistChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+      <br/><span class="reset" style="display: none;">Current filter: <span class="filter"></span></span>
+      <div class="clear"></div>
+  </div>
+  </div>
+  <div class="row">
+  <div id="fracutil-hist" class="chart">
+      <span>Supply Utilization Histogram</span>
+      <a class="reset" href="javascript:fracUtilChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+      <br/><span class="reset" style="display: none;">Current filter: <span class="filter"></span></span>
+      <div class="clear"></div>
+  </div>
+  <div id="avgperf-hist" class="chart">
+      <span>Average Performance Histogram</span>
+      <a class="reset" href="javascript:avgPerfChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+      <br/><span class="reset" style="display: none;">Current filter: <span class="filter"></span></span>
+      <div class="clear"></div>
+  </div>
+  </div>
+  <div id="supply-barchart" class="chart">
+      <span>Total Supply Imps / Days</span>
+      <a class="reset" href="javascript:supplyBarChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+      <br/><span class="reset" style="display: none;">Current filter: <span class="filter"></span></span>
+      <div class="clear"></div>
+  </div>
+  <div id="delivered-barchart" class="chart">
+      <span>Delivered Imps / Days</span>
+      <a class="reset" href="javascript:deliveredBarChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+      <br/><span class="reset" style="display: none;">Current filter: <span class="filter"></span></span>
+      <div class="clear"></div>
+  </div>
+  <div id="edge-barchart" class="chart">
+      <span>Supply-Demand Edges / Days</span>
+      <a class="reset" href="javascript:edgeBarChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+      <br/><span class="reset" style="display: none;">Current filter: <span class="filter"></span></span>
+      <div class="clear"></div>
+  </div>
+  <div id="fill-boxplot" class="chart">
+      <span>Per Node Supply Utilization Distribution</span>
+      <div class="clear"></div>
+  </div>
+    <div class="clearfix"></div>
+    </div>
+    <div class="clearfix"></div>
+</div>
+</div>
+
+
+
+<script type="text/javascript">
+
+'use strict';
+
+var terrible = [ "Did you hear about the fire at the circus?<br>It was in tents...<br>",
+                 "Anything that doesn't matter has no mass.",
+                 "Life is complex: it has both real and imaginary components."
+                ];
+
+var messager =  setInterval( function(){ 
+                var rnd = Math.floor(Math.random() * terrible.length); 
+                jQuery("#myModal").html(
+                    loaderHTML+'<h4><center>'+
+                    terrible[rnd]+'</center></h4>'
+                  ) }, 15000 );
+
+var supplyChart = dc.pieChart("#supply-chart");
+var deliveryChart = dc.pieChart("#delivery-chart");
+var edgesHistChart = dc.barChart("#edges-hist");
+var fracUtilChart = dc.barChart("#fracutil-hist");
+var avgPerfChart = dc.barChart("#avgperf-hist");
+var supplyBarChart = dc.barChart("#supply-barchart");
+var deliveredBarChart = dc.barChart("#delivered-barchart");
+var edgeBarChart = dc.barChart("#edge-barchart");
+var fillBoxPlot = dc.boxPlot("#fill-boxplot");
+var ysd = null;
+var hall = null;
+// set dc.js version in title
+d3.selectAll("#version").text(dc.version);
+var tries = 0;
+var maxTries = 2;
+var d3result = "error";
+// load data from a csv file
+
+//var csvCall = d3.csv("static/sup_used.csv")
+var csvCall = d3.csv("fetch_data")
+  .on( "load", function( hdata){
+    console.log("success");
+    setupPlots(hdata);
+    window.clearInterval(messager);
+    dc.renderAll();
+    //$("#myModal").modal('hide');
+    return;
+  })
+  .on("error", function( error ){
+    tries = tries + 1;
+    console.log(error);
+    if (tries < maxTries){
+      setInterval(function(){ csvCall.get(); }, 3000)
+    }else{
+        window.clearInterval(messager);
+        $("#myModal").html("<h3>Oh noes!!</h3><button class='btn btn-primary' onclick='history.go(-1);'>back</button>");
+    }
+  });
+csvCall.get();
+//console.log(csvCall.response());
+console.log("done");
+function setupPlots(hdata){
+            var dateFormat = d3.time.format("%m/%d/%Y");
+            var dateFmt = d3.time.format("%Y-%m-%d %H");
+            var numberFormat = d3.format(".2f");
+            if (! hdata.length > 0){
+                $("#myModal").html("<h3>Empty Set!</h3><button class='btn btn-primary' onclick='history.go(-1);'>back</button>");
+                return "empty set";
+                }
+
+            // feed it through crossfilter
+            ysd = crossfilter(hdata);
+            hall = ysd.groupAll();
+            var categoryDimension = ysd.dimension(function(d) {
+                return d.supply_category_id;
+            });
+            //alert(categoryDimension);
+            var maxImps=0;
+            var maxConv=0;
+            var dateDimension = ysd.dimension(function(d) {
+                return d.date;
+            });
+            var dateFmt = d3.time.format("%Y-%m-%d")
+            var ymdhFmt = d3.time.format("%Y-%m-%d %H")
+            var dateDim = ysd.dimension(function(d) {
+                return d.date;
+            });
+            var edgesByDateGroup = dateDim.group().reduceSum( function(d){
+                            return 1; });
+
+            var edgesDim = ysd.dimension(function(d){
+                                return d.edges; } );
+            var edgesDimGroup = edgesDim.group();
+            
+            var cbColours = ["#ff7f0e","#2ca02c","#d62728","#9467bd","#1f77b4"];
+            var cbColoursIdx = [];
+            cbColoursIdx["1"]="#009E73";
+            cbColoursIdx["2"]="#CC79A7";
+            cbColoursIdx["3"]="#E69F00";
+            cbColoursIdx["4"]="#0072B2";
+            cbColoursIdx["NA"]="#E69F00";
+            var cbColourScale = d3.scale.ordinal().domain(["1", "2", "3", "4","NA"])
+                                   .range(cbColours);
+            var cbColourScale = d3.scale.ordinal().range(cbColours);
+            var catGroup = categoryDimension.group();
+            var supplyByCatGroup = categoryDimension.group().reduceSum( function(d){
+                            return d.total_possible_utilization; });
+            var deliveryByCatGroup = categoryDimension.group().reduceSum( function(d){
+                            return d.del_imps; });
+            supplyChart.width(180)
+                    .height(180)
+                    .radius(80)
+                    .innerRadius(10)
+                    .dimension(categoryDimension)
+                    .group(supplyByCatGroup)
+                    .colors(cbColourScale)
+                    .label( function(d) {console.log(d); console.log(d.data); return d.key + " - (" + (d.value /1000000000 ).toFixed(1) + "B)" });
+            deliveryChart.width(180)
+                    .height(180)
+                    .radius(80)
+                    .innerRadius(10)
+                    .colors(cbColourScale)
+                    .dimension(categoryDimension)
+                    .group(deliveryByCatGroup)
+                    .label(function(d) {
+                        return d.key + " - (" + (d.value/1000000  ).toFixed(1) + "M)";
+                    });
+            var edgesHist = ysd.dimension(function (d) {
+                  return Math.round(10*Math.log( d.edges )/Math.log(10));
+                  
+              });
+            var edgesHistGroup = edgesHist.group();
+            /* dc.barChart("#volume-month-chart") */
+            edgesHistChart.width(420)
+                .height(180)
+                .margins({top: 10, right: 50, bottom: 30, left: 50})
+                .dimension(edgesHist)
+                .group(edgesHistGroup)
+                .elasticY(true)
+                .centerBar(true)
+                .gap(1)
+                //.round(dc.round.floor)
+                .alwaysUseRounding(true)
+                .x(d3.scale.linear().domain([-1, 40]))
+                .renderHorizontalGridLines(true)
+                .filterPrinter(function (filters) {
+                    var filter = filters[0], s = "";
+                    s += numberFormat("10^"+filter[0]/10) + "% -> 10^" + numberFormat(filter[1]/10) + "%";
+                    return s;
+                });
+                edgesHistChart.xAxis().tickFormat(
+                        function (v) { return "10^" + v/10; });
+                edgesHistChart.yAxis().ticks(5);
+            var fracUtil = ysd.dimension(function (d) {
+                  return Math.round( d.del_imps * 100 / d.total_possible_utilization ) ;
+              });
+            var fracUtilGroup = fracUtil.group();
+            /* dc.barChart("#volume-month-chart") */
+            fracUtilChart.width(450)
+                .height(150)
+                .margins({top: 10, right: 50, bottom: 30, left: 50})
+                .dimension(fracUtil)
+                .group(fracUtilGroup)
+                .elasticY(true)
+                .centerBar(true)
+                //.gap(1)
+                //.round(dc.round.floor)
+                .alwaysUseRounding(true)
+                .x(d3.scale.linear().domain([-5, 105]))
+                .renderHorizontalGridLines(true)
+                .filterPrinter(function (filters) {
+                    var filter = filters[0], s = "";
+                    s += numberFormat(filter[0]) + "% -> " + numberFormat(filter[1]) + "%";
+                    return s;
+                });
+                fracUtilChart.xAxis().tickFormat(
+                        function (v) { return v + "%"; });
+                fracUtilChart.yAxis().ticks(5);
+            var avgPerf = ysd.dimension(function (d) {
+                  return Math.round(d.avg_perf*100);
+              });
+            var avgPerfGroup =avgPerf.group();
+            /* dc.barChart("#volume-month-chart") */
+            avgPerfChart.width(450)
+                .height(150)
+                .margins({top: 10, right: 50, bottom: 30, left: 50})
+                .dimension(avgPerf)
+                .group(avgPerfGroup)
+                .elasticY(true)
+                .centerBar(true)
+                //.gap(1)
+                //.round(dc.round.floor)
+                .alwaysUseRounding(true)
+                .x(d3.scale.linear().domain([-5, 105]))
+                .renderHorizontalGridLines(true)
+                .filterPrinter(function (filters) {
+                    var filter = filters[0], s = "";
+                    s += numberFormat(filter[0]) + " -> " + numberFormat(filter[1]) + "";
+                    return s;
+                });
+                avgPerfChart.xAxis().tickFormat(
+                        function (v) { return v/100 + ""; });
+                avgPerfChart.yAxis().ticks(5);
+
+            var days = ysd.dimension(function(d){return +d.date;});
+            var categories = ysd.dimension(function(d){return d.supply_category_id;});
+            var supplySums = [];
+            var delSums = [];
+            var edgeSums = [];
+            var pctUtilLines = [];
+            var avgPerfLines = []
+            categories.group().all().forEach(function(cat){
+                supplySums.push(days.group().reduceSum(function(d){return d.supply_category_id==cat.key?d.total_possible_utilization:0;}));   
+                delSums.push(days.group().reduceSum(function(d){return d.supply_category_id==cat.key?d.del_imps:0;}));   
+                edgeSums.push(days.group().reduceSum(function(d){return d.supply_category_id==cat.key?d.edges:0;}));   
+                
+            });
+
+            supplyBarChart.width(800)
+                .height(200)
+                .dimension(days)
+                //.centering(false)
+                .margins({top: 10, right: 50, bottom: 30, left: 80})
+                .x(d3.scale.linear().domain([1, 31]))
+                .group(supplySums.pop());
+
+            supplySums.forEach(function(sum){
+                supplyBarChart.stack(sum)
+            });
+            deliveredBarChart.width(800)
+                .height(200)
+                .dimension(days)
+                //.centering(false)
+                .margins({top: 10, right: 50, bottom: 30, left: 80})
+                .x(d3.scale.linear().domain([1, 31]))
+                .group(delSums.pop());
+
+            delSums.forEach(function(sum){
+                deliveredBarChart.stack(sum)
+            });
+
+            edgeBarChart.width(800)
+                .height(200)
+                .dimension(days)
+                //.centering(false)
+                .margins({top: 10, right: 50, bottom: 30, left: 80})
+                .x(d3.scale.linear().domain([1, 31]))
+                .group(edgeSums.pop());
+
+            edgeSums.forEach(function(sum){
+                edgeBarChart.stack(sum)
+            });
+
+            var fillArrayGroup = days.group().reduce(
+              function(p,v) {
+                p.push(v.frac_util*100);
+                return p;
+              },
+              function(p,v) {
+                p.splice(p.indexOf(v.frac_util), 1);
+                return p;
+              },
+              function() {
+                return [];
+              }
+            );
+
+            fillBoxPlot
+              .width(800)
+              .height(480)
+              .margins({top: 10, right: 50, bottom: 30, left: 50})
+              .dimension(days)
+              .group(fillArrayGroup)
+              .elasticY(true)
+              .elasticX(true);
+
+}
+</script>
+
+<div class="clearfix"></div>
+
+</div>

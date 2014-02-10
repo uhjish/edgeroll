@@ -1,0 +1,443 @@
+
+<script type="text/javascript" src="js/d3.v2.js"></script>
+<script type="text/javascript" src="js/crossfilter.js"></script>
+
+<script type="text/javascript" src="js/dc.js"></script>
+
+<link href="css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" type="text/css" href="css/dc.css"/>
+
+<link href='css/shCore.css' rel='stylesheet' type='text/css'/>
+<link href='css/shThemeDefault.css' rel='stylesheet' type='text/css'/>
+<script src='js/shCore.js' type='text/javascript'></script>
+<script src="js/shAutoloader.js" type="text/javascript"></script>
+<script src='js/shBrushJScript.js' type='text/javascript'></script>
+<script src='js/shBrushXml.js' type='text/javascript'></script>
+<script src='js/pencil.js' type='text/javascript'></script>
+
+
+<div class="container">
+
+<div class="row">
+    <div id="network-bubble-chart" class="dc-chart">
+        <strong>Network Performance</strong>
+        <a class="reset" href="javascript:networkBubbleChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+
+        <div class="clearfix"></div>
+    </div>
+</div>
+
+<div class="row">
+<div class="span7">
+    <div id="network-chart" >
+        <strong>Network</strong>
+        <a class="reset" href="javascript:networkChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+
+        <div class="clearfix"></div>
+    </div>
+    <div id="convert-chart" >
+        <strong>Is Convert</strong>
+        <a class="reset" href="javascript:isConvertChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+
+        <div class="clearfix"></div>
+    </div>
+    <div id="tablet-chart" >
+        <strong>Is Tablet</strong>
+        <a class="reset" href="javascript:isTabletChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+
+        <div class="clearfix"></div>
+    </div>
+    <div class="clearfix"></div>
+
+    <div id="vendor-chart" >
+        <strong>Vendor</strong>
+        <a class="reset" href="javascript:vendorChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+
+        <div class="clearfix"></div>
+    </div>
+    <div id="device_os-chart" >
+        <strong>Device OS</strong>
+        <a class="reset" href="javascript:deviceOSChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+
+        <div class="clearfix"></div>
+    </div>
+    <div id="day-of-week-chart" >
+        <strong>Day of Week</strong>
+        <a class="reset" href="javascript:dayOfWeekChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+
+        <div class="clearfix"></div>
+    </div>
+    <div class="clearfix"></div>
+</div>
+<div class="span4">
+    
+    <div id="hourly-chart" >
+        <strong>Sessions by Hour</strong>
+        <a class="reset" href="javascript:hourlyChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+
+        <div class="clearfix"></div>
+    </div>
+    <div id="events-chart" >
+        <strong>Events per Session</strong>
+        <a class="reset" href="javascript:eventsChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+
+        <div class="clearfix"></div>
+    </div>
+</div>
+</div>
+
+<div class="row">
+        <strong>Volume by Day</strong>
+    <div id="monthly-volume-chart" >
+    </div>
+</div>
+
+<div class="row">
+    <div >
+        <div class="dc-data-count">
+            <span class="filter-count"></span> selected out of <span class="total-count"></span> records | <a href="javascript:dc.filterAll(); dc.renderAll();">Reset All</a>
+        </div>
+    </div>
+    <table class="table table-hover dc-data-table">
+        <thead>
+        <tr class="header">
+            <th>Date</th>
+            <th>Open</th>
+            <th>Close</th>
+            <th>Change</th>
+            <th>Volume</th>
+        </tr>
+        </thead>
+    </table>
+</div>
+
+<script type="text/javascript">
+
+'use strict';
+
+var networkChart = dc.pieChart("#network-chart");
+var isConvertChart = dc.pieChart("#convert-chart");
+var isTabletChart = dc.pieChart("#tablet-chart");
+var hourlyChart = dc.barChart("#hourly-chart");
+var eventsChart = dc.barChart("#events-chart");
+var deviceOSChart = dc.pieChart("#device_os-chart");
+var vendorChart = dc.pieChart("#vendor-chart");
+var dayOfWeekChart = dc.pieChart("#day-of-week-chart");
+//var moveChart = dc.compositeChart("#monthly-move-chart");
+var volumeChart = dc.barChart("#monthly-volume-chart");
+var networkBubbleChart = dc.bubbleChart("#network-bubble-chart");
+var ysd = null;
+var hall = null;
+// set dc.js version in title
+d3.selectAll("#version").text(dc.version);
+
+// load data from a csv file
+d3.csv("ndx.csv", function(data) {
+    //d3.csv("ys_counts/ANY/10042", function(hdata) {
+    d3.csv("ndx2.csv", function(hdata) {
+            // since its a csv file we need to format the data a bit
+            var dateFormat = d3.time.format("%m/%d/%Y");
+            var dateFmt = d3.time.format("%Y-%m-%d %H");
+            var numberFormat = d3.format(".2f");
+
+            data.forEach(function(e) {
+                e.dd = dateFormat.parse(e.date);
+                e.month = d3.time.month(e.dd); // pre-calculate month for better performance
+            });
+            hdata.forEach( function(e) {
+                e.dd = dateFmt.parse( e.ymdh );
+                e.hour = d3.time.hour( e.dd );
+            });
+
+            // feed it through crossfilter
+            var ndx = crossfilter(data);
+            var all = ndx.groupAll();
+            ysd = crossfilter(hdata);
+            hall = ysd.groupAll();
+            var networkDimension = ysd.dimension(function(d) {
+                return d.network;
+            });
+            //alert(networkDimension);
+            var maxImps=0;
+            var maxConv=0;
+            var networkPerformanceGroup = networkDimension.group().reduce(
+                    //add
+                    function(p, v) {
+                        ++p.count;
+                        p.convIncrement = +v.convert > 0 ? 1 : 0.0;
+                        p.conversions += p.convIncrement;
+                        p.logConv = Math.log(p.conversions);
+                        p.conversionRate = (p.conversions / p.count) * 100.0;
+                        p.logVolume = Math.log(p.count);
+                        if (p.count > maxImps){
+                           p.maxImps = p.count;
+                        }
+                        if (p.conversions > maxConv){
+                           p.maxConv = p.conversions;
+                        }
+                        return p;
+                    },
+                    //remove
+                    function(p, v) {
+                        --p.count;
+                        p.convIncrement = +v.convert > 0 ? 1 : 0.0;
+                        p.conversions -= p.convIncrement;
+                        p.logConv = Math.log(p.conversions);
+                        p.conversionRate = (p.conversions / p.count) * 100.0;
+                        p.logVolume = Math.log(p.count);
+                        return p;
+                    },
+                    //init
+                    function() {
+                        return {count:0, absGain:0, conversions:0, conversionRate:0, logVolume:0};
+                    }
+            );
+/*
+*/
+            var dateDimension = ysd.dimension(function(d) {
+                return d.dd;
+            });
+            var dateFmt = d3.time.format("%Y-%m-%d")
+            var ymdhFmt = d3.time.format("%Y-%m-%d %H")
+            var dateDim = ysd.dimension(function(d) {
+                return d3.time.day(d.dd)
+            });
+            var volumeByDateGroup = dateDim.group().reduceSum( function(d){
+                            return 1; });
+
+            var eventsDim = ysd.dimension(function(d){
+                                return d.num_events; } );
+            var eventsDimGroup = eventsDim.group();
+            var dowFmt = d3.time.format("%w")
+            var dowDim = ysd.dimension(function(d) {
+                return dowFmt( d.dd )
+            });
+            var isConvert = ysd.dimension(function(d) {
+                return d.convert > 0 ? "Yes" : "No"; 
+            });
+            var isConvertGroup = isConvert.group();
+
+            var isTablet = ysd.dimension(function(d) {
+                return d.is_tablet > 0 ? "Yes" : "No";
+            });
+            var isTabletGroup = isTablet.group();
+            
+            var hrFmt = d3.time.format("%H")
+            var hourDimension = ysd.dimension(function(d) {
+                return hrFmt(d.dd);
+            });
+            var hourDimensionGroup = hourDimension.group();
+
+            
+            var deviceOS = ysd.dimension( function(d){ 
+                return d.device_os } );
+            var deviceOSGroup = deviceOS.group();
+
+            var vendor = ysd.dimension( function(d){ 
+                return d.vendor } );
+            var vendorGroup = vendor.group();
+
+
+            var hdayOfWeek = ysd.dimension(function(d) {
+                var hday = d.dd.getDay();
+                switch (hday) {
+                    case 0:
+                        return "Sun";
+                    case 1:
+                        return "Mon";
+                    case 2:
+                        return "Tue";
+                    case 3:
+                        return "Wed";
+                    case 4:
+                        return "Thu";
+                    case 5:
+                        return "Fri";
+                    case 6:
+                        return "Sat";
+                }
+            });
+            var hdayOfWeekGroup = hdayOfWeek.group();
+            networkBubbleChart.width(990)
+                    .height(250)
+                    .margins({top: 10, right: 50, bottom: 30, left: 40})
+                    .dimension(networkDimension)
+                    .group(networkPerformanceGroup)
+                    .transitionDuration(1500)
+                    .colors(["#ff7373","#67e667","#39e639","#00cc00"])
+                    .colorDomain([0, 100])
+                    .colorAccessor(function(d){return d.value.conversionRate;})
+                    .keyAccessor(function(p) {
+                        return p.value.count;
+                    })
+                    .valueAccessor(function(p) {
+                        return p.value.conversionRate;
+                    })
+                    .radiusValueAccessor(function(p) {
+                        return p.value.conversions;
+                    })
+                    .maxBubbleRelativeSize(0.3)
+                    .x(d3.scale.linear().domain([0,1000000]))
+                    .y(d3.scale.linear().domain([0,100]))
+                    .r(d3.scale.linear().domain([0,100000]))
+                    .elasticY(true)
+                    .yAxisPadding(100)
+                    .elasticX(true)
+                    .xAxisPadding(500)
+                    .renderHorizontalGridLines(true)
+                    .renderVerticalGridLines(true)
+                    .renderLabel(true)
+                    .renderTitle(true)
+                    .label(function(p) {
+                        return p.key;
+                    })
+                    .title(function(p) {
+                        return p.key
+                                + "| "
+                                + "Conversions " + numberFormat(p.value.conversions) + "| "
+                                + "Conversion Rate: " + numberFormat(p.value.conversionRate) + "%| "
+                                + "Volume: " + numberFormat(p.value.count) ;
+                    })
+                    .yAxis().tickFormat(function(v) {
+                        return v + "%";
+                    });
+            var ndGroup = networkDimension.group();
+            networkChart.width(180)
+                    .height(180)
+                    .radius(80)
+                    .innerRadius(30)
+                    .dimension(networkDimension)
+                    .group(ndGroup);
+            isConvertChart.width(180)
+                    .height(180)
+                    .radius(80)
+                    .dimension(isConvert)
+                    .group(isConvertGroup)
+                    .label(function(d) {
+                        return d.data.key + "(" + Math.floor(d.data.value / hall.value() * 100) + "%)";
+                    });
+
+            isTabletChart.width(180)
+                    .height(180)
+                    .radius(80)
+                    .dimension(isTablet)
+                    .group(isTabletGroup)
+                    .label(function(d) {
+                        return d.data.key + "(" + Math.floor(d.data.value / hall.value() * 100) + "%)";
+                    });
+            deviceOSChart.width(180)
+                    .height(180)
+                    .radius(80)
+                    .innerRadius(30)
+                    .dimension(deviceOS)
+                    .group(deviceOSGroup);
+            vendorChart.width(180)
+                    .height(180)
+                    .radius(80)
+                    .innerRadius(30)
+                    .dimension(vendor)
+                    .group(vendorGroup);
+            
+            dayOfWeekChart.width(180)
+                    .height(180)
+                    .radius(80)
+                    .colors(['#3182bd', '#6baed6', '#9ecae1', '#c6dbef', '#dadaeb'])
+                    .innerRadius(30)
+                    .dimension(hdayOfWeek)
+                    .group(hdayOfWeekGroup);
+
+            hourlyChart.width(420)
+                    .height(180)
+                    .margins({top: 10, right: 50, bottom: 30, left: 40})
+                    .dimension(hourDimension)
+                    .group(hourDimensionGroup)
+                    .elasticY(true)
+                    .centerBar(true)
+                    .gap(1)
+                    .round(dc.round.floor)
+                    .x(d3.scale.linear().domain([0, 24]))
+                    .renderHorizontalGridLines(true)
+                    .xAxis()
+                    .tickFormat(function(v) {
+                        return v + "h";
+                    });
+            var maxEvents = eventsDim.top(1)[0].num_events; 
+            eventsChart.width(420)
+                    .height(180)
+                    .margins({top: 10, right: 50, bottom: 30, left: 40})
+                    .dimension(eventsDim)
+                    .group(eventsDimGroup)
+                    .elasticY(true)
+                    .centerBar(true)
+                    .gap(1)
+                    .round(dc.round.floor)
+                    .x(d3.scale.linear().domain([0,25]))
+                    .renderHorizontalGridLines(true)
+                    .xAxis()
+                    .tickFormat(function(v) {
+                        return v + "h";
+                    });
+            var maxDate = ymdhFmt.parse( dateDim.top(1)[0].ymdh );
+            console.log(maxDate); 
+            var minDate = ymdhFmt.parse( dateDim.bottom(1)[0].ymdh); 
+
+            volumeChart.width(990)
+                    .height(200)
+                    .margins({top: 0, right: 50, bottom: 20, left: 40})
+                    .dimension(dateDim)
+                    .group(volumeByDateGroup)
+                    .centerBar(true)
+                    .x(d3.time.scale().domain([minDate , maxDate]))
+                    .round(d3.time.day.round)
+                    .xUnits(d3.time.days)
+                    .renderlet(function(chart){
+                        chart.select("g.y").style("display", "none");
+                        //moveChart.filter(chart.filter());
+                    });
+
+            dc.dataCount(".dc-data-count")
+                    .dimension(ysd)
+                    .group(all);
+
+            dc.dataTable(".dc-data-table")
+                    .dimension(dateDim)
+                    .group( function(d) {
+                        return dateFmt(d.dd);
+                    })
+                    .size(6)
+                    .columns([
+                        function(d) {
+                          return dateFmt(d.dd);
+                        },
+                        function(d) {
+                            return d.network;
+                        },
+                        function(d) {
+                            return d.vendor;
+                        },
+                        function(d) {
+                            return d.device_os;
+                        },
+                        function(d) {
+                          return d.is_tablet > 0 ? "tablet" : "nontablet";
+                        },
+                        function(d) {
+                          return d.convert > 0 ? "true" : "false";
+                        }
+                    ])
+                    .sortBy(function(d) {
+                        return d.dd;
+                    })
+                    .order(d3.ascending)
+                    .renderlet(function(table){
+                        table.selectAll(".dc-table-group").classed("info", true);
+                    });
+
+            dc.renderAll();
+        });
+     });
+</script>
+
+<div class="clearfix"></div>
+
+</div>
