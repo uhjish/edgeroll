@@ -136,8 +136,8 @@ var maxTries = 2;
 var d3result = "error";
 // load data from a csv file
 
-//var csvCall = d3.csv("static/sup_used.csv")
-var csvCall = d3.csv("fetch_data")
+var csvCall = d3.csv("static/sup_used.csv")
+//var csvCall = d3.csv("fetch_data")
   .on( "load", function( hdata){
     console.log("success");
     setupPlots(hdata);
