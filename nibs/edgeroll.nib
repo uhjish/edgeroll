@@ -246,7 +246,7 @@ function setupPlots(hdata){
                 .renderHorizontalGridLines(true)
                 .filterPrinter(function (filters) {
                     var filter = filters[0], s = "";
-                    s += numberFormat("10^"+filter[0]/10) + "% -> 10^" + numberFormat(filter[1]/10) + "%";
+                    s += "10^"+numberFormat(filter[0]/10) + "% -> 10^" + numberFormat(filter[1]/10) + "%";
                     return s;
                 });
                 edgesHistChart.xAxis().tickFormat(
@@ -375,6 +375,9 @@ function setupPlots(hdata){
               .y(d3.scale.linear().domain([-20,120]))
               .elasticY(false)
               .elasticX(true);
+
+            fillBoxPlot.selectAll("rect.box").each(
+                        function(d){ d3.select(this).attr("style", "fill: #d3d3d3" ); } );
 
 }
 </script>

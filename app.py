@@ -65,7 +65,7 @@ def server_static(p):
 
 @route('/edgeroll')
 def render():
-    return template("nibs/edgeroll.nib", sturl=sturl, campaign="brightroll", cname="brightroll")
+    return template("nibs/edgeroll.nib", sturl=sturl, campaign="edgeroll", cname="edgeroll")
 
 
 @route('/fetch_data')
@@ -110,7 +110,8 @@ def cache_all():
 
 def main():
     #pool.spawn( cache_all )
-    bottle.run(host='0.0.0.0', port=os.environ.get('PORT', 5001), reloader=True )
+    bottle.run(server='tornado', workers=2,host='0.0.0.0', port=os.environ.get('PORT', 5001), reloader=True )
+    #bottle.run(host='0.0.0.0', port=os.environ.get('PORT', 5001), reloader=True )
 
 if __name__ == "__main__":
     main()
