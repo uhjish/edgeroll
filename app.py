@@ -75,7 +75,7 @@ def json():
 
 
 @cache.cache('fetch', expire=14400)
-def fetch( filename='static/sup_used.csv' ):
+def fetch( ):
     #db_lnk = lnk.prod.dbs.ax_pg
     edges = pd.read_csv("static/supply_demand_utilization_1.csv")
     supply_possible = pd.read_csv("static/supply_possible_utilization_1.csv")
