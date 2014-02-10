@@ -19,6 +19,12 @@ from bottle import *
 from beaker.middleware import SessionMiddleware
 from beaker.cache import CacheManager
 from beaker.util import parse_cache_config_options
+from bottle_compressor import CompressorPlugin
+
+
+
+
+
 
 
 ## Config # #
@@ -26,6 +32,9 @@ from beaker.util import parse_cache_config_options
 logging.basicConfig(level=logging.DEBUG)
 
 app = bottle.app()
+
+compressor_plugin = CompressorPlugin()
+bottle.install(compressor_plugin)
 
 
 cache_opts = {
