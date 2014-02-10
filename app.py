@@ -88,6 +88,7 @@ def fetch( filename='static/sup_used.csv' ):
     supply_agg = pd.merge( supply_possible, supply_agg, how="left", left_on=['date','supply_id'], right_index=True )
     supply_agg = pd.merge( supply_agg, supply_cats, how="left" )
     supply_agg['frac_util'] = supply_agg['del_imps']/supply_agg['total_possible_utilization']
+    supply_agg['frac_util'][supply_agg.frac_util > 1] = 1
     oh = StringIO.StringIO()
     logging.info("done fetching")
     supply_agg.to_csv(oh, index=False)

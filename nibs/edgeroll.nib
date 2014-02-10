@@ -162,6 +162,7 @@ console.log("done");
 function setupPlots(hdata){
             var dateFormat = d3.time.format("%m/%d/%Y");
             var dateFmt = d3.time.format("%Y-%m-%d %H");
+            var catFmt = d3.format("0d");
             var numberFormat = d3.format(".2f");
             if (! hdata.length > 0){
                 $("#myModal").html("<h3>Empty Set!</h3><button class='btn btn-primary' onclick='history.go(-1);'>back</button>");
@@ -214,7 +215,7 @@ function setupPlots(hdata){
                     .dimension(categoryDimension)
                     .group(supplyByCatGroup)
                     .colors(cbColourScale)
-                    .label( function(d) {console.log(d); console.log(d.data); return d.key + " - (" + (d.value /1000000000 ).toFixed(1) + "B)" });
+                    .label( function(d) { return catFmt(d.key) + " - (" + (d.value /1000000000 ).toFixed(1) + "B)" });
             deliveryChart.width(180)
                     .height(180)
                     .radius(80)
@@ -223,7 +224,7 @@ function setupPlots(hdata){
                     .dimension(categoryDimension)
                     .group(deliveryByCatGroup)
                     .label(function(d) {
-                        return d.key + " - (" + (d.value/1000000  ).toFixed(1) + "M)";
+                        return catFmt(d.key) + " - (" + (d.value/1000000  ).toFixed(1) + "M)";
                     });
             var edgesHist = ysd.dimension(function (d) {
                   return Math.round(10*Math.log( d.edges )/Math.log(10));
@@ -357,7 +358,7 @@ function setupPlots(hdata){
                 return p;
               },
               function(p,v) {
-                p.splice(p.indexOf(v.frac_util), 1);
+                p.splice(p.indexOf(v.frac_util*100), 1);
                 return p;
               },
               function() {
@@ -371,7 +372,8 @@ function setupPlots(hdata){
               .margins({top: 10, right: 50, bottom: 30, left: 50})
               .dimension(days)
               .group(fillArrayGroup)
-              .elasticY(true)
+              .y(d3.scale.linear().domain([-20,120]))
+              .elasticY(false)
               .elasticX(true);
 
 }
