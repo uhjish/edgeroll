@@ -62,22 +62,22 @@ def index():
     l = map(lambda x: x[1] + '~' + str(x[0]), l)
     return template('nibs/ys_index.nib', nitems=len(l), items='["'+'","'.join(l) +'"]' , sturl=sturl  ) 
 '''
-@route('/sorry_page')
+@route('/sorry_page', skip=[compressor_plugin])
 def sorry():
     return "Sorry, you can't do that."
 
-@route('/static/<p:path>')
+@route('/static/<p:path>', skip=[compressor_plugin])
 def server_static(p):
     return static_file(p, 
              root='static/')
 
 
-@route('/edgeroll')
+@route('/edgeroll', skip=[compressor_plugin])
 def render():
     return template("nibs/edgeroll.nib", sturl=sturl, campaign="edgeroll", cname="edgeroll")
 
 
-@route('/fetch_data')
+@route('/fetch_data', skip=[compressor_plugin])
 def json():
     # {'columns':cols, 'records': rows, 'matrix': mat, 'where':where  }
     return fetch( )
