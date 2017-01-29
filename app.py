@@ -22,11 +22,6 @@ from beaker.util import parse_cache_config_options
 from bottle_compressor import CompressorPlugin
 
 
-
-
-
-
-
 ## Config # #
 
 logging.basicConfig(level=logging.DEBUG)
